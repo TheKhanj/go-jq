@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/thekhanj/digikala-api/cli/internal"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,6 +28,7 @@ type Jq struct {
 	files     []io.Reader
 	options   []interface{}
 	ranOnce   bool
+	tempDir   string
 }
 
 func (this *Jq) Start() ([]byte, error) {
@@ -82,12 +82,12 @@ func (this *Jq) getOptions() []string {
 }
 
 func (this *Jq) newFifo(r io.Reader) (string, error) {
-	err := internal.AssertDir(internal.GetProcDir())
+	err := assertDir(this.tempDir)
 	if err != nil {
 		return "", err
 	}
 
-	tmp, err := os.CreateTemp(internal.GetProcDir(), "jq-fifo-*")
+	tmp, err := os.CreateTemp(this.tempDir, "jq-fifo-*")
 	if err != nil {
 		return "", err
 	}
@@ -139,93 +139,77 @@ func (this *Jq) newFifo(r io.Reader) (string, error) {
 	return path, nil
 }
 
-type JqBuilder struct {
-	jq Jq
+type JqOption = func(jq *Jq)
+
+func WithFlag(flag string) JqOption {
+	return func(jq *Jq) {
+		jq.options = append(jq.options, flag)
+	}
 }
 
-func (this *JqBuilder) WithFlag(flag string) *JqBuilder {
-	this.jq.options = append(this.jq.options, flag)
-
-	return this
+func WithOption(key, val string) JqOption {
+	return func(jq *Jq) {
+		jq.options = append(jq.options, keyValOption{key, val})
+	}
 }
 
-func (this *JqBuilder) WithOption(key, val string) *JqBuilder {
-	this.jq.options = append(this.jq.options, keyValOption{key, val})
-
-	return this
+func WithFilter(filter io.Reader) JqOption {
+	return func(jq *Jq) {
+		jq.filter = filter
+	}
 }
 
-func (this *JqBuilder) WithFilter(filter io.Reader) *JqBuilder {
-	this.jq.filter = filter
-
-	return this
-}
-
-func (this *JqBuilder) WithFilterString(filter string) *JqBuilder {
+func WithFilterString(filter string) JqOption {
 	r := strings.NewReader(filter)
 
-	return this.WithFilter(r)
+	return WithFilter(r)
 }
 
-func (this *JqBuilder) WithFile(file io.Reader) *JqBuilder {
-	this.jq.files = append(this.jq.files, file)
-
-	return this
+func WithFile(file io.Reader) JqOption {
+	return func(jq *Jq) {
+		jq.files = append(jq.files, file)
+	}
 }
 
-func (this *JqBuilder) WithFilePath(path string) *JqBuilder {
-	this.jq.filePaths = append(this.jq.filePaths, path)
-
-	return this
+func WithFilePath(path string) JqOption {
+	return func(jq *Jq) {
+		jq.filePaths = append(jq.filePaths, path)
+	}
 }
 
-func (this *JqBuilder) WithFileData(data []byte) *JqBuilder {
+func WithFileData(data []byte) JqOption {
 	r := bytes.NewReader(data)
 
-	return this.WithFile(r)
+	return WithFile(r)
 }
 
-func (this *JqBuilder) Build() (*Jq, error) {
-	if this.jq.filter == nil {
+func WithTempDir(dir string) JqOption {
+	return func(jq *Jq) {
+		jq.tempDir = dir
+	}
+}
+
+func NewJq(opts ...JqOption) (*Jq, error) {
+	jq := Jq{
+		filter:    nil,
+		filePaths: make([]string, 0),
+		files:     make([]io.Reader, 0),
+		options:   make([]interface{}, 0),
+		ranOnce:   false,
+		tempDir:   os.TempDir(),
+	}
+
+	for _, opt := range opts {
+		opt(&jq)
+	}
+
+	if jq.filter == nil {
 		return nil, errors.New("no filter provided")
 	}
 
-	if len(this.jq.files)+len(this.jq.filePaths) == 0 {
+	if len(jq.files)+len(jq.filePaths) == 0 {
 		return nil, errors.New("no input files provided")
 	}
 
-	return &this.jq, nil
-}
-
-func NewJqBuilder() *JqBuilder {
-	b := JqBuilder{
-		jq: Jq{
-			filter:    nil,
-			filePaths: make([]string, 0),
-			files:     make([]io.Reader, 0),
-			options:   make([]interface{}, 0),
-			ranOnce:   false,
-		},
-	}
-
-	return &b
-}
-
-func NewJq(
-	data []byte, filter string, flags ...string,
-) *Jq {
-	b := NewJqBuilder().
-		WithFileData(data).
-		WithFilterString(filter)
-
-	for _, f := range flags {
-		b.WithFlag(f)
-	}
-
-	jq, err := b.Build()
-	if err != nil {
-		panic(`regexp: ` + err.Error())
-	}
-
-	return jq
+	return &jq, nil
 }
