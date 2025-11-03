@@ -31,7 +31,7 @@ type Jq struct {
 	tempDir   string
 }
 
-func (this *Jq) Start() ([]byte, error) {
+func (this *Jq) Exec() ([]byte, error) {
 	if this.ranOnce {
 		return nil, errors.New("cannot call function more than once")
 	}

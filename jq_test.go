@@ -18,7 +18,7 @@ func TestJq(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := jq.Start()
+	res, err := jq.Exec()
 	if err != nil {
 		t.Fatal(err)
 	}

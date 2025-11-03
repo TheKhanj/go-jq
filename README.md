@@ -34,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := jq.Start()
+	result, err := jq.Exec()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func main() {
 *   `filePaths []string`: List of file paths to process.
 *   `files []io.Reader`: List of readers to process.
 *   `options []interface{}`: List of command-line options.
-*   `ranOnce bool`: Flag to prevent multiple calls to `Start()`.
+*   `ranOnce bool`: Flag to prevent multiple calls to `Exec()`.
 *   `tempDir string`: Temporary directory used for creating FIFO files.
 
 ### `JqOption` Type
@@ -62,7 +62,7 @@ A function type that takes a `*Jq` pointer and allows you to configure the `Jq` 
 
 Creates a new `Jq` instance with the provided options.
 
-### `Start() ([]byte, error)`
+### `Exec() ([]byte, error)`
 
 Executes the `jq` command and returns the output as a byte array and an error.
 
