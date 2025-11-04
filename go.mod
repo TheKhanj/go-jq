@@ -1,4 +1,4 @@
-module github.com/thekhanj/jq
+module github.com/thekhanj/go-jq
 
 go 1.25.3
 
