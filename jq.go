@@ -32,6 +32,14 @@ type Jq struct {
 }
 
 func (this *Jq) Exec() ([]byte, error) {
+	if len(this.files)+len(this.filePaths) == 0 {
+		return nil, errors.New("no input files provided")
+	}
+
+	if len(this.files)+len(this.filePaths) == 0 {
+		return nil, errors.New("no input files provided")
+	}
+
 	if this.ranOnce {
 		return nil, errors.New("cannot call function more than once")
 	}
@@ -189,7 +197,7 @@ func WithTempDir(dir string) JqOption {
 	}
 }
 
-func NewJq(opts ...JqOption) (*Jq, error) {
+func New(opts ...JqOption) *Jq {
 	jq := Jq{
 		filter:    nil,
 		filePaths: make([]string, 0),
@@ -203,13 +211,5 @@ func NewJq(opts ...JqOption) (*Jq, error) {
 		opt(&jq)
 	}
 
-	if jq.filter == nil {
-		return nil, errors.New("no filter provided")
-	}
-
-	if len(jq.files)+len(jq.filePaths) == 0 {
-		return nil, errors.New("no input files provided")
-	}
-
-	return &jq, nil
+	return &jq
 }

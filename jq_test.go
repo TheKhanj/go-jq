@@ -9,14 +9,11 @@ func TestJq(t *testing.T) {
 	str := `{"name":"pooyan","lastname":"khanjankhani"}`
 	filter := `{fullname: (.name + " " + .lastname)}`
 
-	jq, err := NewJq(
+	jq := New(
 		WithFileData([]byte(str)),
 		WithFilterString(filter),
 		WithFlag("-c"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	res, err := jq.Exec()
 	if err != nil {
